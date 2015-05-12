@@ -199,6 +199,7 @@ namespace BALL
 
 
 			static const PixelFormat RGBF_96;
+			static const PixelFormat RGBA_F32;
 
 		private:
 			ChannelFormat channels[MAX_NUMBER_OF_CHANNELS];

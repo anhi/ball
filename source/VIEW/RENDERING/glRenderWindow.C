@@ -107,16 +107,21 @@ namespace BALL
 				FB_TEXTURE_DATATYPE = GL_FLOAT;
 				result = true;
 			}
-			else
+			else if(m_fmt.getPixelFormat() == PixelFormat::RGBA_F32)
 			{
-				if(m_fmt.getPixelFormat() == PixelFormat::RGBA_32)
-				{
-					FB_INTERNAL_TEXTURE_FORMAT = GL_RGBA;
-					FB_TEXTURE_FORMAT = GL_RGBA;
-					FB_TEXTURE_DATATYPE = GL_UNSIGNED_BYTE;
-				}
+				FB_INTERNAL_TEXTURE_FORMAT = GL_RGBA;
+				FB_TEXTURE_FORMAT = GL_RGBA;
+				FB_TEXTURE_DATATYPE = GL_FLOAT;
 				result = true;
-			}			
+			}
+			else if(m_fmt.getPixelFormat() == PixelFormat::RGBA_32)
+			{
+				FB_INTERNAL_TEXTURE_FORMAT = GL_RGBA;
+				FB_TEXTURE_FORMAT = GL_RGBA;
+				FB_TEXTURE_DATATYPE = GL_UNSIGNED_BYTE;
+				result = true;
+			}
+
 			return result;
 		}
 		
@@ -144,11 +149,11 @@ namespace BALL
 			glPushAttrib(GL_DEPTH_BUFFER_BIT);
 
 #ifdef USE_GLPAINTPIXELS
-			glDrawPixels(m_fmt.getWidth(), m_fmt.getHeight(), FB_TEXTURE_FORMAT, FB_TEXTURE_DATATYPE, m_pixels.get());
+			glDrawPixels(m_fmt.getWidth(), m_fmt.getHeight(), FB_TEXTURE_FORMAT, FB_TEXTURE_DATATYPE, m_framebuffer->getData());
 #else
 			glBindTexture(FB_TEXTURE_TARGET, m_screenTexID);
 			glTexSubImage2D(FB_TEXTURE_TARGET, 0, 0, 0, m_fmt.getWidth(), m_fmt.getHeight(), 
-					FB_TEXTURE_FORMAT, FB_TEXTURE_DATATYPE, m_pixels.get());                
+					FB_TEXTURE_FORMAT, FB_TEXTURE_DATATYPE, m_framebuffer->getData()); 
 
 			glEnable(FB_TEXTURE_TARGET);
 			glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);

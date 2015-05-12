@@ -414,12 +414,6 @@ namespace BALL
 				GLRenderer& getGLRenderer()
 				{ return *gl_renderer_;}
 
-#ifdef BALL_HAS_RTFACT
-				///
-				RaytracingRenderer& getRaytracingRenderer()
-				{ return *rt_renderer_;}
-#endif
-
 				/** Set a new GLRenderer.
 					This method is intended for users, that what to
 					overload the behaviour of the GLRenderer.
@@ -608,6 +602,11 @@ namespace BALL
 				void addRTfactWindow();
 #endif
 
+#ifdef BALL_HAS_OSPRAY
+				///
+				void addOSPRayWindow();
+#endif
+
 				///
 				void exitStereo();
 
@@ -662,7 +661,7 @@ namespace BALL
 				///
 				void applyStereoDefaults();
 
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 				RaytracingWindowPtr getWindow(WindowType aWindowType);
 #endif
 
@@ -887,7 +886,7 @@ namespace BALL
 				QAction *animation_export_POV_action_, *animation_export_VRML_action_, 	*animation_export_PNG_action_, *animation_repeat_action_;
 
 #ifdef BALL_HAS_RTFACT
-                QAction *toggle_continuous_loop_action_;
+				QAction *toggle_continuous_loop_action_;
 #endif
 				QAction *switch_grid_;
 				QMenu* create_coordinate_system_;
@@ -912,6 +911,10 @@ namespace BALL
 				RaytracingRenderer* rt_renderer_;
 				RaytracingWindowPtr rt_window_;
 #endif
+#ifdef BALL_HAS_OSPRAY
+				RaytracingRenderer* ospray_renderer_;
+				RaytracingWindowPtr ospray_window_;
+#endif
 
 				static float mouse_sensitivity_;
 				static float mouse_wheel_sensitivity_;
@@ -933,9 +936,7 @@ namespace BALL
 				std::list<Camera> animation_points_;
 				AnimationThread* animation_thread_;
 				bool stop_animation_;
-#ifdef BALL_HAS_RTFACT
 				bool continuous_loop_;
-#endif
 				bool want_to_use_vertex_buffer_;
 				bool use_preview_;
 

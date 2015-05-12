@@ -320,6 +320,9 @@
 // Define whether BALL was built with rtfact support
 #cmakedefine BALL_HAS_RTFACT
 
+// Define whether BALL was built with OSPRay support
+#cmakedefine BALL_HAS_OSPRAY
+
 // OpenEye
 #cmakedefine BALL_HAS_OPENEYE
 

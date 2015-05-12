@@ -80,12 +80,21 @@ namespace BALL
 
         const PixelFormat PixelFormat::RGBF_96(
             ChannelFormat(ChannelFormat::RED_CHANNEL,
-                          ChannelFormat::FLOAT_CHANNEL, sizeof(float)*8),
+                          ChannelFormat::FLOAT_CHANNEL, 8*sizeof(float)),
             ChannelFormat(ChannelFormat::GREEN_CHANNEL, 
-                          ChannelFormat::FLOAT_CHANNEL, sizeof(float)*8),
+                          ChannelFormat::FLOAT_CHANNEL, 8*sizeof(float)),
             ChannelFormat(ChannelFormat::BLUE_CHANNEL, 
-                          ChannelFormat::FLOAT_CHANNEL, sizeof(float)*8));
+                          ChannelFormat::FLOAT_CHANNEL, 8*sizeof(float)));
 
+				const PixelFormat PixelFormat::RGBA_F32(
+            ChannelFormat(ChannelFormat::RED_CHANNEL, 
+                          ChannelFormat::UNSIGNED_INT_CHANNEL, 8*sizeof(float)),
+            ChannelFormat(ChannelFormat::GREEN_CHANNEL, 
+                          ChannelFormat::UNSIGNED_INT_CHANNEL, 8*sizeof(float)),
+            ChannelFormat(ChannelFormat::BLUE_CHANNEL, 
+                          ChannelFormat::UNSIGNED_INT_CHANNEL, 8*sizeof(float)),
+            ChannelFormat(ChannelFormat::ALPHA_CHANNEL, 
+                          ChannelFormat::UNSIGNED_INT_CHANNEL, 8*sizeof(float)));
 
         void PixelFormat::print(std::ostream &o) const
         {

@@ -11,7 +11,7 @@ namespace BALL
 	{		
 		bool RaytracingRenderer::supports(const PixelFormat &format) const
 		{
-			return ((format == PixelFormat::RGBA_32) || (format == PixelFormat::RGBF_96));
+			return ((format == PixelFormat::RGBA_32) || (format == PixelFormat::RGBF_96) || (format == PixelFormat::RGBA_F32));
 		}
 
 		Resolution RaytracingRenderer::getSupportedResolution(

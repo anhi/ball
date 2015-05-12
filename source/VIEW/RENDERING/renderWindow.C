@@ -14,7 +14,7 @@ namespace BALL
 	{
 		template<typename taPixelDatatype>
 			TRenderWindow<taPixelDatatype>::TRenderWindow()
-			:m_pfm((BALLVIEW_IS_SAME_TYPE(taPixelDatatype, char) ? PixelFormat::RGBA_32 : PixelFormat::RGBF_96)),
+			:m_pfm((BALLVIEW_IS_SAME_TYPE(taPixelDatatype, char) ? PixelFormat::RGBA_32 : PixelFormat::RGBA_F32)), //PixelFormat::RGBF_96)),
 			m_minimalWidth(2),
 			m_minimalHeight(2),
 			do_not_resize_(false)

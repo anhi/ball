@@ -80,7 +80,10 @@ namespace BALL {
 					TILING_RENDERER,
 
 					/// RTfact renderer (depends on the RTfact library)
-					RTFACT_RENDERER
+					RTFACT_RENDERER,
+
+					/// OSPRay renderer (depends on the OSPRay library)
+					OSPRAY_RENDERER
 				};
 
 				enum STEREO_SETUP {

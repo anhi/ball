@@ -74,6 +74,11 @@
 
 #endif
 
+#ifdef BALL_HAS_OSPRAY
+#include <BALL/VIEW/RENDERING/glRenderWindow.h>
+#include <BALL/VIEW/RENDERING/RENDERERS/osprayRenderer.h>
+#endif
+
 #include <QtGui/QMenuBar>
 #include <QtGui/QPrinter>
 #include <QtGui/QPrintDialog>
@@ -101,13 +106,6 @@ namespace BALL
 {
 	namespace VIEW
 	{
-
-#ifdef BALL_HAS_RTFACT
-		//typedef CudaVolumeRenderer t_RaytracingRenderer;
-		typedef RTfactRenderer t_RaytracingRenderer;
-		typedef GLRenderWindow t_RaytracingWindow;
-#endif
-
 		Position Scene::screenshot_nr_ = 100000;
 		Position Scene::pov_nr_ = 100000;
 		Position Scene::vrml_nr_ = 100000;
@@ -132,15 +130,16 @@ namespace BALL
 				renderers_(),
 				gl_renderer_(new GLRenderer),
 #ifdef BALL_HAS_RTFACT
-				rt_renderer_(new t_RaytracingRenderer()),
+				rt_renderer_(new RTfactRenderer()),
+#endif
+#ifdef BALL_HAS_OSPRAY
+				ospray_renderer_(new OSPRayRenderer()),
 #endif
 				light_settings_(new LightSettings(this)),
 				material_settings_(new MaterialSettings(this)),
 				animation_thread_(0),
 				stop_animation_(false),
-#ifdef BALL_HAS_RTFACT
 				continuous_loop_(false),
-#endif
 				want_to_use_vertex_buffer_(false),
 				use_preview_(true),
 				show_fps_(false),
@@ -184,15 +183,16 @@ namespace BALL
 				renderers_(),
 				gl_renderer_(new GLRenderer()),
 #ifdef BALL_HAS_RTFACT
-				rt_renderer_(new t_RaytracingRenderer()),
+				rt_renderer_(new RTfactRenderer()),
+#endif
+#ifdef BALL_HAS_OSPRAY
+				ospray_renderer_(new OSPRayRenderer()),
 #endif
 				light_settings_(new LightSettings(this)),
 				material_settings_(new MaterialSettings(this)),
 				animation_thread_(0),
 				stop_animation_(false),
-#ifdef BALL_HAS_RTFACT
 				continuous_loop_(false),
-#endif
 				toolbar_view_controls_(new QToolBar(tr("3D View Controls"), this)),
 				toolbar_edit_controls_(new QToolBar(tr("Edit Controls"), this)),
 				main_display_(new GLRenderWindow(this)),
@@ -251,7 +251,9 @@ namespace BALL
 
 		void Scene::registerRenderers_()
 		{
-#ifndef BALL_HAS_RTFACT
+#if defined(BALL_HAS_OSPRAY)
+			renderers_.push_back(boost::shared_ptr<RenderSetup>(new RenderSetup(ospray_renderer_, main_display_, this, stage_)));
+#elif defined(BALL_HAS_RTFACT)
 			renderers_.push_back(boost::shared_ptr<RenderSetup>(new RenderSetup(gl_renderer_, main_display_, this, stage_)));
 #else
 			renderers_.push_back(boost::shared_ptr<RenderSetup>(new RenderSetup(rt_renderer_, main_display_, this, stage_)));
@@ -1321,6 +1323,10 @@ namespace BALL
 			insertMenuEntry(MainControl::DISPLAY, tr("Add new RTfact Window"), this, SLOT(addRTfactWindow()),
 			                "Shortcut|Display|Add_new_RTfact_Window", QKeySequence(), tr(""), UIOperationMode::MODE_ADVANCED);
 #endif
+#ifdef BALL_HAS_OSPRAY
+			insertMenuEntry(MainControl::DISPLAY, tr("Add new OSPRay Window"), this, SLOT(addOSPRayWindow()),
+			                "Shortcut|Display|Add_new_OSPRay_Window", QKeySequence(), tr(""), UIOperationMode::MODE_ADVANCED);
+#endif
 			// ======================== Display->Animation ===============================================
 			String help_url = "tips.html#animations";
 
@@ -1533,7 +1539,7 @@ namespace BALL
 				toolbar_actions_view_controls_.push_back(screenshot_action);
 			}
 
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 			toggle_continuous_loop_action_ = NULL;
 			if (UIOperationMode::instance().getMode() <= UIOperationMode::MODE_ADVANCED)
 			{
@@ -2319,10 +2325,40 @@ namespace BALL
 
 			}
 #ifdef BALL_HAS_RTFACT
-			else if (RTTI::isKindOf<t_RaytracingRenderer>(*(renderers_[main_renderer_]->renderer)))
+			else if (RTTI::isKindOf<RTfactRenderer>(*(renderers_[main_renderer_]->renderer)))
 			{
 				// create a new renderer
-				t_RaytracingRenderer* renderer = new t_RaytracingRenderer;
+				RTfactRenderer* renderer = new RTfactRenderer;
+
+				// build a new offscreen target for our renderer
+				TRenderWindow<BALL_DEFAULT_PIXEL_TYPE>* target = new TRenderWindow<BALL_DEFAULT_PIXEL_TYPE>;
+
+				// and combine it into a new render setup
+				boost::shared_ptr<RenderSetup> tr_rs(new RenderSetup(renderer, target, this, stage_));
+				renderers_.push_back(tr_rs);
+
+				tr_rs->init();
+
+				applyPreferences();
+
+				resetRepresentationsForRenderer_(*tr_rs);
+
+				// iterate 10 times for antialiasing
+				tr_rs->useContinuousLoop(true);
+				tr_rs->setTimeToLive(20);
+				tr_rs->exportPNGAfterTTL(filename);
+
+				tr_rs->resize(offscreen_factor_ * width(), offscreen_factor_ * height());
+				tr_rs->start();
+
+				updateGL();
+			}
+#endif
+#ifdef BALL_HAS_OSPRAY
+			else if (RTTI::isKindOf<OSPRayRenderer>(*(renderers_[main_renderer_]->renderer)))
+			{
+				// create a new renderer
+				OSPRayRenderer* renderer = new OSPRayRenderer;
 
 				// build a new offscreen target for our renderer
 				TRenderWindow<BALL_DEFAULT_PIXEL_TYPE>* target = new TRenderWindow<BALL_DEFAULT_PIXEL_TYPE>;
@@ -2572,7 +2608,7 @@ namespace BALL
 
 			// let's see if we support the requested type at all...
 #ifdef BALL_HAS_RTFACT
-			if (new_type != RenderSetup::OPENGL_RENDERER && new_type != RenderSetup::RTFACT_RENDERER)
+			if (new_type != RenderSetup::OPENGL_RENDERER && new_type != RenderSetup::RTFACT_RENDERER && new_type != RenderSetup::OSPRAY_RENDERER)
 #else
 				if (new_type != RenderSetup::OPENGL_RENDERER)
 #endif
@@ -2585,10 +2621,10 @@ namespace BALL
 			boost::shared_ptr<RenderSetup> main_renderer_ptr = renderers_[main_renderer_];
 
 			stopContinuousLoop();
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 			if (UIOperationMode::instance().getMode() <= UIOperationMode::MODE_ADVANCED)
 			{
-				toggle_continuous_loop_action_->setEnabled(new_type == RenderSetup::RTFACT_RENDERER);
+				toggle_continuous_loop_action_->setEnabled(new_type == RenderSetup::RTFACT_RENDERER || new_type == RenderSetup::OSPRAY_RENDERER);
 			}
 #endif
 
@@ -2618,7 +2654,17 @@ namespace BALL
 			else if (new_type == RenderSetup::RTFACT_RENDERER)
 			{
 #ifdef BALL_HAS_RTFACT
-				t_RaytracingRenderer* new_renderer = new t_RaytracingRenderer();
+				RTfactRenderer* new_renderer = new RTfactRenderer();
+				new_renderer->init(*this);
+				new_renderer->setFrameBufferFormat(main_display_->getFormat());
+
+				main_renderer_ptr = boost::shared_ptr<RenderSetup>(new RenderSetup(new_renderer, main_display_, this, stage_));
+#endif
+			}
+			else if (new_type == RenderSetup::OSPRAY_RENDERER)
+			{
+#ifdef BALL_HAS_OSPRAY
+				OSPRayRenderer* new_renderer = new OSPRayRenderer();
 				new_renderer->init(*this);
 				new_renderer->setFrameBufferFormat(main_display_->getFormat());
 
@@ -2674,7 +2720,34 @@ namespace BALL
 
 			new_widget->installEventFilter(this);
 
-			t_RaytracingRenderer* new_renderer = new t_RaytracingRenderer();
+			RTfactRenderer* new_renderer = new RTfactRenderer();
+			new_renderer->init(*this);
+			new_renderer->setFrameBufferFormat(new_widget->getFormat());
+
+			boost::shared_ptr<RenderSetup> new_rs(new RenderSetup(new_renderer, new_widget, this, stage_));
+			new_rs->setReceiveBufferUpdates(true);
+
+			resetRepresentationsForRenderer_(*new_rs);
+			new_widget->show();
+
+			renderers_.push_back(new_rs);
+			// NOTE: *don't* try to start new_rs, since this is an automatic variable
+			//       that will be destroyed soon afterwards
+			renderers_[renderers_.size()-1]->start();
+		}
+#endif
+
+#ifdef BALL_HAS_OSPRAY
+		void Scene::addOSPRayWindow()
+		{
+			GLRenderWindow* new_widget = new GLRenderWindow(0, ((String)tr("Scene")).c_str(), Qt::Window);
+			new_widget->init();
+			new_widget->makeCurrent();
+			new_widget->resize(width(), height());
+
+			new_widget->installEventFilter(this);
+
+			OSPRayRenderer* new_renderer = new OSPRayRenderer();
 			new_renderer->init(*this);
 			new_renderer->setFrameBufferFormat(new_widget->getFormat());
 
@@ -2774,13 +2847,13 @@ namespace BALL
 				else if (stereo_renderer_type == RenderSetup::RTFACT_RENDERER)
 				{
 #ifdef BALL_HAS_RTFACT
-					left_renderer = new t_RaytracingRenderer();
+					left_renderer = new RTfactRenderer();
 					left_renderer->init(*this);
-					static_cast<t_RaytracingRenderer*>(left_renderer)->setFrameBufferFormat(left_widget->getFormat());
+					static_cast<RTfactRenderer*>(left_renderer)->setFrameBufferFormat(left_widget->getFormat());
 
-					right_renderer = new t_RaytracingRenderer();
+					right_renderer = new RTfactRenderer();
 					right_renderer->init(*this);
-					static_cast<t_RaytracingRenderer*>(right_renderer)->setFrameBufferFormat(right_widget->getFormat());
+					static_cast<RTfactRenderer*>(right_renderer)->setFrameBufferFormat(right_widget->getFormat());
 #endif
 				}
 
@@ -2918,7 +2991,7 @@ namespace BALL
 			left_renderer->init(*this);
 			left_renderer->enableVertexBuffers(want_to_use_vertex_buffer_);
 #else
-			t_RaytracingRenderer*  left_renderer = new t_RaytracingRenderer();
+			RTfactRenderer*  left_renderer = new RTfactRenderer();
 			left_renderer->init(*this);
 			left_renderer->setFrameBufferFormat(left_widget->getFormat());
 #endif
@@ -2946,7 +3019,7 @@ namespace BALL
 			right_renderer->init(*this);
 			right_renderer->enableVertexBuffers(want_to_use_vertex_buffer_);
 #else
-			t_RaytracingRenderer*  right_renderer = new t_RaytracingRenderer();
+			RTfactRenderer*  right_renderer = new RTfactRenderer();
 			right_renderer->init(*this);
 			right_renderer->setFrameBufferFormat(right_widget->getFormat());
 #endif
@@ -3007,7 +3080,7 @@ namespace BALL
 			left_renderer->init(*this);
 			left_renderer->enableVertexBuffers(want_to_use_vertex_buffer_);
 #else
-			t_RaytracingRenderer*  left_renderer = new t_RaytracingRenderer();
+			RTfactRenderer*  left_renderer = new RTfactRenderer();
 			left_renderer->init(*this);
 			left_renderer->setFrameBufferFormat(left_widget->getFormat());
 #endif
@@ -3035,7 +3108,7 @@ namespace BALL
 			right_renderer->init(*this);
 			right_renderer->enableVertexBuffers(want_to_use_vertex_buffer_);
 #else
-			t_RaytracingRenderer*  right_renderer = new t_RaytracingRenderer();
+			RTfactRenderer*  right_renderer = new RTfactRenderer();
 			right_renderer->init(*this);
 			right_renderer->setFrameBufferFormat(right_widget->getFormat());
 #endif
@@ -3108,7 +3181,7 @@ namespace BALL
 
 		void Scene::startContinuousLoop()
 		{
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 			continuous_loop_ = true;
 
 			for (Position i=0; i<renderers_.size(); ++i)
@@ -3133,7 +3206,7 @@ namespace BALL
 
 		void Scene::stopContinuousLoop()
 		{
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 			continuous_loop_ = false;
 
 			for (Position i=0; i<renderers_.size(); ++i)
@@ -3153,7 +3226,7 @@ namespace BALL
 
 		void Scene::toggleContinuousLoop()
 		{
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 			if (continuous_loop_)
 			{
 				stopContinuousLoop();
@@ -3473,7 +3546,7 @@ namespace BALL
 			gl_renderer_ = &renderer;
 		}
 
-#ifdef BALL_HAS_RTFACT
+#if defined(BALL_HAS_RTFACT) || defined(BALL_HAS_OSPRAY)
 		Scene::RaytracingWindowPtr Scene::getWindow(WindowType aWindowType)
 		{
 			switch(aWindowType)
@@ -4199,7 +4272,7 @@ namespace BALL
 			{
 				toolbar_view_controls_->addActions(toolbar_actions_view_controls_);
 				toolbar_view_controls_->insertSeparator(switch_grid_);
-				getMainControl()->addToolBar(Qt::TopToolBarArea, toolbar_view_controls_);
+                getMainControl()->addToolBar(Qt::TopToolBarArea, toolbar_view_controls_);
 				ModularWidget::addToolBarEntries(tb);
 				getMainControl()->initPopupMenu(MainControl::WINDOWS)->addAction(toolbar_view_controls_->toggleViewAction());
 

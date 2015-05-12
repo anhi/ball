@@ -20,6 +20,10 @@
 #endif
 #endif
 
+#ifdef BALL_HAS_OSPRAY
+# include <BALL/VIEW/RENDERING/RENDERERS/osprayRenderer.h>
+#endif
+
 #include <QtGui/QApplication>
 
 namespace BALL
@@ -435,6 +439,7 @@ namespace BALL
 				{
 					// Unfortunately, we will have to convert the data pixel by pixel, since QImage does
 					// not seem to support anything like RGBF_96
+					// TODO: what about RGBA_F32?
 
 					float *data = (float*)(buffer->getData());
 
@@ -634,6 +639,10 @@ namespace BALL
 #ifdef BALL_HAS_RTFACT
 			else if (RTTI::isKindOf<RTfactRenderer>(*renderer))
 				renderer_type_ = RTFACT_RENDERER;
+#endif
+#ifdef BALL_HAS_OSPRAY
+			else if (RTTI::isKindOf<OSPRayRenderer>(*renderer))
+				renderer_type_ = OSPRAY_RENDERER;
 #endif
 			else
 				renderer_type_ = UNKNOWN_RENDERER;

@@ -338,6 +338,8 @@ namespace BALL
 
 						if(!(lights_[current_light].getParam3f("direction") == float3(direction.x, direction.y, direction.z)))
 							lights_[current_light].setParam3f("direction", float3(direction.x, direction.y, direction.z));
+						break;
+
 					case LightSource::POSITIONAL:
 						light_position = it->getPosition();
 						if (it->isRelativeToCamera())
@@ -348,6 +350,7 @@ namespace BALL
 						if(!(lights_[current_light].getParam3f("position") == float3(light_position.x, light_position.y, light_position.z)))
 							lights_[current_light].setParam3f("position", float3(light_position.x, light_position.y, light_position.z));
 						break;
+
 					default:
 						break;
 				}
@@ -1506,6 +1509,24 @@ namespace BALL
 					RTfact::uint colorBufferLength = colorImage->getResX() * colorImage->getResY()* colorImage->getComponentCount() * sizeof(t_ColorImage::Component);
 					BufferHandle colorBuffer = RTpieCpp::CreateBufferHandleUseData(colorBufferLength, colorImage->getFirstComponent(0,0));
 					colorBufferHandle = RTpieCpp::CreateImage2DHandleUseData(RTfact::RTpie::IImage2D::COMPONENT_FLOAT, 3, width_, height_, colorBuffer);
+
+					//distance buffer
+					t_DistanceImage* distanceImage = new t_DistanceImage(1, width_, height_);
+					RTfact::uint distanceBufferLength = distanceImage->getResX() * distanceImage->getResY()* distanceImage->getComponentCount() * sizeof(t_DistanceImage::Component);
+					BufferHandle distanceBuffer = RTpieCpp::CreateBufferHandleUseData(distanceBufferLength, distanceImage->getFirstComponent(0,0));
+					distanceBufferHandle = RTpieCpp::CreateImage2DHandleUseData(RTfact::RTpie::IImage2D::COMPONENT_FLOAT, 1, width_, height_, distanceBuffer);
+
+					//set framebuffer buffers
+					framebuffer.setColorImage(colorImage);
+					framebuffer.setDistanceImage(distanceImage);
+				}
+				else if (fmt.getPixelFormat() == PixelFormat::RGBA_F32)
+				{
+					//color buffer (use given memory)
+					t_ColorImage* colorImage = new t_ColorImage((float*)buffer->getData(), 4, width_, height_, width_+stride_, false);
+					RTfact::uint colorBufferLength = colorImage->getResX() * colorImage->getResY()* colorImage->getComponentCount() * sizeof(t_ColorImage::Component);
+					BufferHandle colorBuffer = RTpieCpp::CreateBufferHandleUseData(colorBufferLength, colorImage->getFirstComponent(0,0));
+					colorBufferHandle = RTpieCpp::CreateImage2DHandleUseData(RTfact::RTpie::IImage2D::COMPONENT_FLOAT, 4, width_, height_, colorBuffer);
 
 					//distance buffer
 					t_DistanceImage* distanceImage = new t_DistanceImage(1, width_, height_);

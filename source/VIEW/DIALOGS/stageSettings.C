@@ -65,15 +65,28 @@ namespace BALL
 			stereoScreensRenderer_comboBox->addItem(tr("OpenGL"));
 			stereoScreensRenderer_comboBox->setCurrentIndex(1);
 
-#ifndef BALL_HAS_RTFACT
-			radioButton_rtfact->setEnabled(false);
+#if !defined(BALL_HAS_RTFACT) && !defined(BALL_HAS_OSPRAY)
 			radioButton_opengl->setChecked(true);
-#else
+#endif
+
+#ifdef BALL_HAS_RTFACT
 			radioButton_rtfact->setChecked(true);
 			controlRenderer_comboBox->addItem(tr("RTfact"));
 			stereoScreensRenderer_comboBox->addItem(tr("RTfact"));
 			stereoScreensRenderer_comboBox->setCurrentIndex(2);
+#else
+			radioButton_rtfact->setEnabled(false);
 #endif
+
+#ifdef BALL_HAS_OSPRAY
+			radioButton_ospray->setChecked(true);
+			controlRenderer_comboBox->addItem(tr("OSPRay"));
+			stereoScreensRenderer_comboBox->addItem(tr("OSPRay"));
+			stereoScreensRenderer_comboBox->setCurrentIndex(2);
+#else
+			radioButton_ospray->setEnabled(false);
+#endif
+
 // TODO: this is the bad ms wischa hack!! Remove after the children are gone!
 			controlRenderer_comboBox->setCurrentIndex(2);
 			leftEyeScreen_comboBox->setCurrentIndex(2);
@@ -307,8 +320,10 @@ namespace BALL
 
 			if (radioButton_opengl->isChecked())
 				scene_->switchRenderer(RenderSetup::OPENGL_RENDERER);
-			else
+			else if (radioButton_rtfact->isChecked())
 				scene_->switchRenderer(RenderSetup::RTFACT_RENDERER);
+			else
+				scene_->switchRenderer(RenderSetup::OSPRAY_RENDERER);
 		}
 
 		Vector3 StageSettings::getTextureUpDirection_()
@@ -550,6 +565,8 @@ namespace BALL
 				result = RenderSetup::OPENGL_RENDERER;
 			else if (selected_renderer == "RTfact")
 				result = RenderSetup::RTFACT_RENDERER;
+			else if (selected_renderer == "OSPRay")
+				result = RenderSetup::OSPRAY_RENDERER;
 
 			return result;
 		}
@@ -564,6 +581,8 @@ namespace BALL
 				result = RenderSetup::OPENGL_RENDERER;
 			else if (selected_renderer == "RTfact")
 				result = RenderSetup::RTFACT_RENDERER;
+			else if (selected_renderer == "OSPRay")
+				result = RenderSetup::OSPRAY_RENDERER;
 
 			return result;
 		}

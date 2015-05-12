@@ -198,10 +198,10 @@ namespace BALL
 				/** Returns the format of this buffer */
 				const FrameBufferFormat &getFormat() const { return format; }
 
-			protected:
-
 				/** Sets pointer to the data of this buffer */
 				void setData(void *data) { this->data = data; }
+
+			protected:
 
 				/** Sets the format of this buffer */
 				void setFormat(const FrameBufferFormat &format) { this->format = format; }
